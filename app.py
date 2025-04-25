@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_cors import CORS  # Добавлено для CORS
 from datetime import datetime
 import os
 
@@ -11,6 +12,9 @@ app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vpn_keys.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# Включение CORS для API (разрешить запросы с https://vpngen.vercel.app)
+CORS(app, resources={r"/": {"origins": "https://vpngen.vercel.app"}})
 
 # Инициализация Flask-Login
 login_manager = LoginManager()
