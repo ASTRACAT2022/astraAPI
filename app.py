@@ -1,4 +1,3 @@
-```python
 from flask import Flask, Response, render_template, request, redirect, url_for, flash
 import random
 import os
