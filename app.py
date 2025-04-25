@@ -5,7 +5,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from datetime import datetime
 import os
 
-app = Flask(__name__)
+# Инициализация приложения с явным указанием папки шаблонов
+app = Flask(__name__, template_folder='templates')
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vpn_keys.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -43,17 +44,16 @@ class VPNKey(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Создаём базу данных при первом запуске
+# Создание базы данных и администратора по умолчанию
 with app.app_context():
     db.create_all()
-    # Создаём администратора по умолчанию
     if not User.query.filter_by(username='admin').first():
         admin = User(username='admin')
         admin.set_password('admin')
         db.session.add(admin)
         db.session.commit()
 
-# API endpoint для получения ключа
+# API для получения ключа
 @app.route('/')
 def get_vpn_key():
     active_key = VPNKey.query.filter_by(is_active=True, is_used=False).first()
@@ -75,7 +75,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('admin_dashboard'))
-        flash('Invalid username or password')
+        flash('Неверное имя пользователя или пароль')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -84,7 +84,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# Админ панель
+# Админ-панель
 @app.route('/admin')
 @login_required
 def admin_dashboard():
@@ -109,7 +109,7 @@ def add_key():
                 new_key = VPNKey(key=key, notes=request.form.get('notes'))
                 db.session.add(new_key)
         db.session.commit()
-        flash(f'Added {len(keys_list)} keys', 'success')
+        flash(f'Добавлено {len(keys_list)} ключей', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/key/edit/<int:id>', methods=['GET', 'POST'])
@@ -121,7 +121,7 @@ def edit_key(id):
         key.notes = request.form['notes']
         key.is_active = 'is_active' in request.form
         db.session.commit()
-        flash('Key updated successfully', 'success')
+        flash('Ключ успешно обновлён', 'success')
         return redirect(url_for('admin_dashboard'))
     return render_template('admin/edit_key.html', key=key)
 
@@ -131,7 +131,7 @@ def delete_key(id):
     key = VPNKey.query.get_or_404(id)
     db.session.delete(key)
     db.session.commit()
-    flash('Key deleted successfully', 'success')
+    flash('Ключ успешно удалён', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/key/reset/<int:id>')
@@ -141,7 +141,7 @@ def reset_key(id):
     key.is_used = False
     key.use_count = 0
     db.session.commit()
-    flash('Key reset successfully', 'success')
+    flash('Ключ успешно сброшен', 'success')
     return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
