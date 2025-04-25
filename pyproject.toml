@@ -1,0 +1,149 @@
+```toml
+   [tool.poetry]
+   name = "astra-api"
+   version = "0.1.0"
+   description = "VPN Key API"
+   authors = ["Ваше Имя <your.email@example.com>"]
+
+   [tool.poetry.dependencies]
+   python = "^3.11"
+   flask = "^3.0.3"
+   matplotlib = "^3.9.2"
+   gunicorn = "^23.0.0"
+
+   [build-system]
+   requires = ["poetry-core>=1.0.0"]
+   build-backend = "poetry.core.masonry.api"
+   ```
+
+   Локально выполните `poetry lock`, чтобы создать `poetry.lock`, и закоммитьте его:
+   ```bash
+   poetry lock
+   git add pyproject.toml poetry.lock
+   git commit -m "Добавлен pyproject.toml и poetry.lock"
+   git push origin main
+   ```
+
+2. **Настройте Render**:
+   - **Команда сборки**: Укажите, что зависимости устанавливаются через Poetry:
+     ```
+     poetry install --no-root
+     ```
+     Это установит зависимости из `pyproject.toml` и `poetry.lock`.
+   - **Команда запуска**: Запустите приложение через Gunicorn (сервер для продакшена):
+     ```
+     poetry run gunicorn -w 4 -b 0.0.0.0:$PORT app:app
+     ```
+     - `-w 4`: 4 рабочих процесса.
+     - `-b 0.0.0.0:$PORT`: Привязка к порту, который задаёт Render.
+     - `app:app`: Ссылка на Flask-приложение в `app.py`.
+
+3. **Обновите настройки в Render**:
+   - Зайдите в панель управления Render.
+   - Откройте ваш сервис (`astraAPI`).
+   - Измените **Build Command** на `poetry install --no-root`.
+   - Измените **Start Command** на `poetry run gunicorn -w 4 -b 0.0.0.0:$PORT app:app`.
+   - Проверьте переменную окружения:
+     - Ключ: `PYTHON_VERSION`
+     - Значение: `3.11.11` (обычно уже установлено).
+   - Если используете свой домен (`example.com`), убедитесь, что он настроен в Render.
+
+4. **Добавьте Gunicorn**:
+   Добавьте `gunicorn` в зависимости Poetry:
+   ```bash
+   poetry add gunicorn
+   ```
+   Это обновит `pyproject.toml` и `poetry.lock`. Закоммитьте изменения:
+   ```bash
+   git add pyproject.toml poetry.lock
+   git commit -m "Добавлен gunicorn"
+   git push origin main
+   ```
+
+5. **Перезапустите деплой**:
+   В Render запустите повторную сборку (Redeploy).
+
+#### Вариант 2: Создать `requirements.txt`
+Если вы хотите использовать `pip` и `requirements.txt` вместо Poetry:
+
+1. **Сгенерируйте `requirements.txt`**:
+   Локально в директории проекта выполните:
+   ```bash
+   poetry export -f requirements.txt --output requirements.txt --without-hashes
+   ```
+   Это создаст `requirements.txt` с зависимостями (`flask`, `matplotlib`, `gunicorn`).
+
+2. **Добавьте `requirements.txt` в репозиторий**:
+   ```bash
+   git add requirements.txt
+   git commit -m "Добавлен requirements.txt для Render"
+   git push origin main
+   ```
+
+3. **Настройте Render**:
+   - **Build Command**: Оставьте `pip install -r requirements.txt`.
+   - **Start Command**: Укажите запуск через Gunicorn:
+     ```
+     gunicorn -w 4 -b 0.0.0.0:$PORT app:app
+     ```
+   - Убедитесь, что `gunicorn` добавлен в `requirements.txt`. Если нет, добавьте его:
+     ```bash
+     poetry add gunicorn
+     poetry export -f requirements.txt --output requirements.txt --without-hashes
+     ```
+
+4. **Перезапустите деплой**:
+   Запустите повторную сборку в Render.
+
+#### Вариант 3: Проверить репозиторий
+Если в репозитории (`https://github.com/ASTRACAT2022/astraAPI`) проблемы с файлами:
+- Убедитесь, что коммит `962d7d50` содержит `app.py`, `templates/admin.html`, `pyproject.toml`.
+- Если `pyproject.toml` нет, добавьте его (как показано выше) и закоммитьте.
+- Если репозиторий приватный, проверьте, что Render имеет доступ через интеграцию с GitHub.
+
+### Дополнительные советы
+- **Права доступа к файлам**: Убедитесь, что `vpn_keys.txt` и `used_keys.txt` доступны для записи. На Render они создаются в рабочей директории. Для сохранения данных между деплоями используйте постоянное хранилище (Render Disk).
+- **Безопасность админ-панели**: Чтобы защитить логин и пароль (`admin`/`password123`), добавьте их как переменные окружения в Render:
+  ```python
+  import os
+  ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
+  ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'password123')
+  ```
+  В Render добавьте переменные `ADMIN_USERNAME` и `ADMIN_PASSWORD`.
+- **Свой домен**: Вы упомянули `example.com` для API и `example.com/admin` для админ-панели. Убедитесь, что домен настроен в Render. Flask-роуты (`/` и `/admin`) автоматически обработают эти пути.
+- **Matplotlib**: Если графики не отображаются, добавьте в начало `app.py`:
+  ```python
+  import matplotlib
+  matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
+  ```
+- **Отладка**: Если деплой снова не сработает, проверьте логи в Render. Типичные проблемы: отсутствующие файлы или зависимости. Смотрите инструкции Render: https://render.com/docs/troubleshooting-deploys.
+
+### Пошаговый план
+1. Склонируйте репозиторий локально:
+   ```bash
+   git clone https://github.com/ASTRACAT2022/astraAPI
+   cd astraAPI
+   git checkout 962d7d50ccfd1e5589d083dcb40ef8c21aac169a
+   ```
+2. Добавьте или проверьте `pyproject.toml` и `poetry.lock` (используйте пример выше, если нужно).
+3. Установите `gunicorn`:
+   ```bash
+   poetry add gunicorn
+   ```
+4. Закоммитьте изменения:
+   ```bash
+   git add .
+   git commit -m "Настройка для деплоя на Render"
+   git push origin main
+   ```
+5. Обновите настройки Render:
+   - Build Command: `poetry install --no-root`
+   - Start Command: `poetry run gunicorn -w 4 -b 0.0.0.0:$PORT app:app`
+6. Перезапустите деплой.
+
+### Тестирование
+- **API**: После деплоя откройте `https://your-render-url.onrender.com` (или `example.com`), чтобы получить VPN-ключ в формате RAW.
+- **Админ-панель**: Откройте `https://your-render-url.onrender.com/admin` (или `example.com/admin`), войдите с логином `admin` и паролем `password123`. Проверьте статистику, график и загрузку ключей.
+
+Если будут ошибки или нужна помощь с настройкой домена, напишите, приложите логи ошибок, и я помогу!
