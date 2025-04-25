@@ -1,0 +1,2 @@
+# astraAPI
+astracaAPI VPN key
